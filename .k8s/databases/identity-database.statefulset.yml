@@ -1,0 +1,42 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+ name: identity-database
+spec:
+  serviceName: identity-database
+  selector:
+    matchLabels:
+     database: identity
+  template:
+   metadata:
+    labels:
+     database: identity
+     system: database
+   spec: 
+    terminationGracePeriodSeconds: 60 #We put a termination grace period because databases are usually heavy applications and need some time to shut down successfully
+    containers:
+     - name: identity-database
+       image: mcr.microsoft.com/mssql/server:2019-latest
+       imagePullPolicy: IfNotPresent #prevent unnecessary downloads by caching with the “IfNotPresent” policy
+       ports:
+       - containerPort: 1433
+       resources:
+        limits:
+         memory: "2Gi"
+         cpu: "1000m"
+       env:
+       - name: ACCEPT_EULA
+         value: "Y"
+       - name: SA_PASSWORD
+         valueFrom:
+          secretKeyRef:
+           name: environment-secrets
+           key: identity-database-sa-password
+       volumeMounts:
+         - mountPath: /var/opt/mssql
+           name: identity-database-data
+    volumes:
+     - name: identity-database-data
+       persistentVolumeClaim:
+           claimName: identity-database-data
+        

@@ -5,9 +5,8 @@ metadata:
 spec:
   #type: LoadBalancer #if i want to connect to db externally - MS Management tools/Data grip
   clusterIP: None
-  selector:
-    database: identity 
   ports:
   - port: 1433
     targetPort: 1433
-
+  selector:
+    database: identity

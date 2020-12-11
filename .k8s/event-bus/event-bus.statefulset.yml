@@ -1,0 +1,43 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+ name: event-bus
+spec:
+  serviceName: event-bus
+  selector:
+    matchLabels:
+     event-bus: rabbitmq
+  template:
+   metadata:
+    labels:
+     event-bus: rabbitmq
+   spec: 
+    containers:
+     - name: rabbitmq
+       image: rabbitmq:3-management
+       imagePullPolicy: IfNotPresent #prevent unnecessary downloads by caching with the “IfNotPresent” policy
+       ports:
+       - containerPort: 5672
+       resources:
+        limits:
+         memory: "1Gi"
+         cpu: "250m"
+       env:
+       - name: RABBITMQ_DEFAULT_USER
+         valueFrom:
+          configMapKeyRef:
+           name: environment-settings
+           key: event-bus-user
+       - name: RABBITMQ_DEFAULT_PASS
+         valueFrom:
+          secretKeyRef:
+           name: environment-secrets
+           key: event-bus-password
+       volumeMounts:
+         - mountPath: /var/lib/rabbitmq/mnesia
+           name: event-bus-data
+    volumes:
+     - name: event-bus-data
+       persistentVolumeClaim:
+           claimName: event-bus-data
+        

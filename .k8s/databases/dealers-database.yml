@@ -1,0 +1,73 @@
+#I want to reserve 10Gi for dealers database
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: dealers-database-data #give a name to PersistentVolumeClaim. 
+spec:
+ accessModes:
+ - "ReadWriteOnce"
+ resources:
+  requests:
+   storage: 10Gi 
+
+---
+
+#I want dealers database to be accessible only in k8s cluster
+apiVersion: v1
+kind: Service
+metadata:
+  name: dealers-database #give a name to Service
+spec:
+  #type: LoadBalancer #if i want to connect to db externally - MS Management tools/Data grip
+  clusterIP: None
+  selector:
+    database: dealers
+  ports:
+  - port: 1433
+    targetPort: 1433
+
+---
+
+#I want to have persistent storage for dealers database
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+ name: dealers-database #give a name to StatefulSet
+spec:
+  serviceName: dealers-database
+  selector:
+    matchLabels:
+     database: dealers #search for the pods with label "database" and value "dealers" (line 44 - template:metadata:labels:database)
+  template:
+   metadata:
+    labels:
+     database: dealers #set label "database" with value "dealers" to Pod (used in line 40 - selector:matchLabels:database)
+     system: database
+   spec: 
+    terminationGracePeriodSeconds: 60 #We put a termination grace period because databases are usually heavy applications and need some time to shut down successfully
+    containers:
+     - name: dealers-database #name of container 
+       image: mcr.microsoft.com/mssql/server:2019-latest
+       imagePullPolicy: IfNotPresent #prevent unnecessary downloads by caching with the “IfNotPresent” policy
+       ports:
+       - containerPort: 1433
+       resources:
+        limits:
+         memory: "2Gi"
+         cpu: "500m"
+       env:
+       - name: ACCEPT_EULA
+         value: "Y"
+       - name: SA_PASSWORD
+         valueFrom:
+          secretKeyRef:
+           name: environment-secrets
+           key: dealers-database-sa-password
+       volumeMounts:
+         - mountPath: /var/opt/mssql
+           name: dealers-database-data #mount volume /var/opt/mssql to dealers-database-data
+    volumes:
+     - name: dealers-database-data #I want "dealers-database-data" volume to be store into "dealers-database-data" PersistentVolumeClaim
+       persistentVolumeClaim:
+           claimName: dealers-database-data #get PersistentVolumeClaim (line 5)
+        

@@ -1,21 +1,49 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: statistics-database-data
+spec:
+ accessModes:
+ - "ReadWriteOnce"
+ resources:
+  requests:
+   storage: 10Gi 
+
+---
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: statistics-database
+spec:
+  #type: LoadBalancer #if i want to connect to db externally - MS Management tools/Data grip
+  clusterIP: None
+  selector:
+    database: statistics
+  ports:
+  - port: 1433
+    targetPort: 1433
+
+--- 
+
 apiVersion: apps/v1
 kind: StatefulSet
 metadata:
- name: dealers-database
+ name: statistics-database
 spec:
-  serviceName: dealers-database
+  serviceName: statistics-database
   selector:
     matchLabels:
-     database: dealers
+     database: statistics
   template:
    metadata:
     labels:
-     database: dealers
+     database: statistics
      system: database
    spec: 
     terminationGracePeriodSeconds: 60 #We put a termination grace period because databases are usually heavy applications and need some time to shut down successfully
     containers:
-     - name: dealers-database
+     - name: statistics-database
        image: mcr.microsoft.com/mssql/server:2019-latest
        imagePullPolicy: IfNotPresent #prevent unnecessary downloads by caching with the “IfNotPresent” policy
        ports:
@@ -31,12 +59,12 @@ spec:
          valueFrom:
           secretKeyRef:
            name: environment-secrets
-           key: dealers-database-sa-password
+           key: statistics-database-sa-password
        volumeMounts:
          - mountPath: /var/opt/mssql
-           name: dealers-database-data
+           name: statistics-database-data
     volumes:
-     - name: dealers-database-data
+     - name: statistics-database-data
        persistentVolumeClaim:
-           claimName: dealers-database-data
+           claimName: statistics-database-data
         

@@ -1,3 +1,37 @@
+#I want to reserve 10Gi for identity database
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: identity-database-data
+spec:
+  accessModes:
+  - ReadWriteOnce #because I have single replication of database. I don't need multiple pods using the volume
+                  # If no storage class is set in the persistent volume claim, the cluster will provide a volume from its default configuration:
+                  #  - In a local environment - it will be the development machine’s hard disk ("hostpath").
+                  #  - In a production environment – it depends on the cloud or the cluster infrastructure.
+  resources:
+    requests:
+      storage: 10Gi
+
+---
+
+#I want identity database to be accessible only in k8s cluster
+apiVersion: v1
+kind: Service
+metadata:
+  name: identity-database
+spec:
+  #type: LoadBalancer #if i want to connect to db externally - MS Management tools/Data grip
+  clusterIP: None
+  ports:
+  - port: 1433
+    targetPort: 1433
+  selector:
+    database: identity
+
+---
+
+#I want to have persistent storage for identity database
 apiVersion: apps/v1
 kind: StatefulSet
 metadata:
